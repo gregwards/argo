@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Aver Voice Test</title>
+  <style>
+    body { font-family: system-ui; max-width: 700px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
+    #status { padding: 8px 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }
+    .disconnected { background: #fee; color: #900; }
+    .connecting { background: #ffd; color: #660; }
+    .connected { background: #efe; color: #060; }
+    button { padding: 10px 24px; font-size: 16px; border: none; border-radius: 6px; cursor: pointer; margin-right: 8px; }
+    #connectBtn { background: #111; color: #fff; }
+    #connectBtn:disabled { opacity: 0.4; cursor: default; }
+    #disconnectBtn { background: #c00; color: #fff; }
+    #transcript { margin-top: 16px; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; min-height: 300px; max-height: 500px; overflow-y: auto; }
+    .msg { margin-bottom: 12px; padding: 8px 12px; border-radius: 12px; max-width: 80%; font-size: 14px; line-height: 1.5; }
+    .bot { background: #e8e8e8; color: #111; }
+    .user { background: #111; color: #fff; margin-left: auto; }
+    .interim { background: #ddd; color: #666; margin-left: auto; font-style: italic; }
+    .system { background: #ffe; color: #660; font-size: 12px; text-align: center; max-width: 100%; }
+    #events { margin-top: 16px; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px; max-height: 200px; overflow-y: auto; font-size: 11px; font-family: monospace; color: #666; }
+    .event-line { margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <h2>Aver Voice Test</h2>
+  <div id="status" class="disconnected">Disconnected</div>
+  <div>
+    <button id="connectBtn">Connect</button>
+    <button id="disconnectBtn" style="display:none">Disconnect</button>
+  </div>
+  <div id="transcript"></div>
+  <details open>
+    <summary style="cursor:pointer;font-size:13px;margin-top:12px;color:#666">Raw Events</summary>
+    <div id="events"></div>
+  </details>
+
+  <script type="module">
+    import { PipecatClient } from "https://esm.sh/@pipecat-ai/client-js@1.7.0";
+    import { SmallWebRTCTransport } from "https://esm.sh/@pipecat-ai/small-webrtc-transport@1.10.0";
+
+    const BASE_URL = "http://localhost:7860";
+    let client = null;
+    let botTextBuffer = "";
+
+    const transcriptEl = document.getElementById("transcript");
+    const eventsEl = document.getElementById("events");
+    const statusEl = document.getElementById("status");
+
+    function setStatus(text, cls) {
+      statusEl.textContent = text;
+      statusEl.className = cls;
+    }
+
+    function addMsg(text, cls) {
+      const interim = transcriptEl.querySelector(".interim");
+      if (interim && cls !== "interim") interim.remove();
+      if (cls === "interim") {
+        const existing = transcriptEl.querySelector(".interim");
+        if (existing) { existing.textContent = text; return; }
+      }
+      const div = document.createElement("div");
+      div.className = "msg " + cls;
+      div.textContent = text;
+      transcriptEl.appendChild(div);
+      transcriptEl.scrollTop = transcriptEl.scrollHeight;
+    }
+
+    function logEvent(type, data) {
+      const time = new Date().toLocaleTimeString();
+      const div = document.createElement("div");
+      div.className = "event-line";
+      const dataStr = data ? " " + JSON.stringify(data).slice(0, 200) : "";
+      div.textContent = `${time} ${type}${dataStr}`;
+      eventsEl.appendChild(div);
+      eventsEl.scrollTop = eventsEl.scrollHeight;
+    }
+
+    async function doConnect() {
+      document.getElementById("connectBtn").disabled = true;
+      document.getElementById("disconnectBtn").style.display = "inline";
+      setStatus("Connecting...", "connecting");
+      transcriptEl.innerHTML = "";
+      eventsEl.innerHTML = "";
+      botTextBuffer = "";
+
+      try {
+        const transport = new SmallWebRTCTransport();
+
+        client = new PipecatClient({
+          transport,
+          enableMic: true,
+          enableCam: false,
+        });
+
+        // Connection events
+        client.on("connected", () => {
+          setStatus("Connected", "connected");
+          logEvent("connected");
+        });
+
+        client.on("disconnected", () => {
+          setStatus("Disconnected", "disconnected");
+          logEvent("disconnected");
+          document.getElementById("connectBtn").disabled = false;
+          document.getElementById("disconnectBtn").style.display = "none";
+        });
+
+        client.on("transportStateChanged", (state) => {
+          logEvent("transportState", state);
+        });
+
+        client.on("botReady", (data) => {
+          logEvent("botReady", data);
+          addMsg("Bot ready. Speak into your microphone.", "system");
+        });
+
+        // Bot LLM text — streamed token by token
+        client.on("botLlmText", (data) => {
+          logEvent("botLlmText", data);
+          botTextBuffer += (data.text || data || "");
+        });
+
+        client.on("botLlmStarted", () => {
+          logEvent("botLlmStarted");
+          botTextBuffer = "";
+        });
+
+        client.on("botLlmStopped", () => {
+          logEvent("botLlmStopped");
+          if (botTextBuffer.trim()) {
+            addMsg(botTextBuffer, "bot");
+            botTextBuffer = "";
+          }
+        });
+
+        // Bot transcription (aggregated sentence)
+        client.on("botTranscript", (data) => {
+          logEvent("botTranscript", data);
+        });
+
+        // Bot output (older RTVI protocol)
+        client.on("botOutput", (data) => {
+          logEvent("botOutput", data);
+        });
+
+        // User transcription
+        client.on("userTranscript", (data) => {
+          logEvent("userTranscript", data);
+          if (data.final) {
+            addMsg(data.text, "user");
+          } else {
+            addMsg(data.text, "interim");
+          }
+        });
+
+        // Speaking events
+        client.on("userStartedSpeaking", () => logEvent("userStartedSpeaking"));
+        client.on("userStoppedSpeaking", () => logEvent("userStoppedSpeaking"));
+        client.on("botStartedSpeaking", () => logEvent("botStartedSpeaking"));
+        client.on("botStoppedSpeaking", () => logEvent("botStoppedSpeaking"));
+
+        // Function calls
+        client.on("llmFunctionCallStarted", (data) => logEvent("llmFunctionCallStarted", data));
+        client.on("llmFunctionCallInProgress", (data) => logEvent("llmFunctionCallInProgress", data));
+        client.on("llmFunctionCall", (data) => logEvent("llmFunctionCall", data));
+
+        // Errors
+        client.on("error", (err) => {
+          logEvent("error", err);
+          addMsg("Error: " + JSON.stringify(err), "system");
+        });
+
+        client.on("metrics", (data) => logEvent("metrics", data));
+
+        await client.startBotAndConnect({
+          endpoint: BASE_URL + "/start",
+          enableDefaultIceServers: true,
+        });
+
+      } catch (e) {
+        setStatus("Connection failed: " + e.message, "disconnected");
+        logEvent("connectError", { message: e.message });
+        document.getElementById("connectBtn").disabled = false;
+        document.getElementById("disconnectBtn").style.display = "none";
+      }
+    }
+
+    async function doDisconnect() {
+      if (client) {
+        await client.disconnect();
+        client = null;
+      }
+    }
+
+    document.getElementById("connectBtn").addEventListener("click", doConnect);
+    document.getElementById("disconnectBtn").addEventListener("click", doDisconnect);
+  </script>
+</body>
+</html>

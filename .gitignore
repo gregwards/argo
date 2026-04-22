@@ -1,0 +1,37 @@
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+
+# Build artifacts
+frontend/package-lock.json
+
+# Recordings (ephemeral, not committed)
+backend/recordings/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Planning artifacts (internal, not needed for deployment)
+.planning/
+planning/
+
+# Design reference files
+voxaver-*.html
