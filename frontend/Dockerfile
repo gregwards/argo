@@ -15,6 +15,7 @@ ENV HOSTNAME=0.0.0.0
 # Copy standalone output + static assets
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+# Ensure public dir exists before build (Next.js standalone expects it)
 COPY --from=builder /app/public ./public
 
 EXPOSE 3000
