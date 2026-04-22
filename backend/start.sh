@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+echo "Initializing database tables..."
+python -c "
+import asyncio
+from db.database import init_db
+asyncio.run(init_db())
+print('Tables initialized')
+"
+
 echo "Running database migrations..."
 alembic upgrade head
 
