@@ -215,7 +215,10 @@ export default function AssessmentSession() {
         lastInterimTimeRef.current = Date.now();
       },
       onUserTranscriptFinal: (text: string) => {
-        resetSilenceCountdown();
+        // Don't reset the countdown — let it keep draining. Deepgram sends
+        // finalized transcripts before the 5s speech timeout fires, so
+        // resetting here would kill the bar prematurely. It snaps to zero
+        // when the AI actually starts responding (onBotText).
         setInterimText("");
         setListeningState("processing");
         setTranscript((prev) => [
