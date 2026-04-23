@@ -29,11 +29,11 @@ async function devFetch(path: string, opts?: RequestInit) {
 // --- Pipeline Steps ---
 
 const PIPELINE_STEPS = [
-  { num: 1, title: "Create", desc: "Instructor defines learning outcomes and assessment parameters" },
-  { num: 2, title: "Share", desc: "Students receive a magic link to access the assessment" },
-  { num: 3, title: "Assess", desc: "Student has a 10-20 min adaptive voice conversation with AI" },
-  { num: 4, title: "Profile", desc: "AI generates a competency profile with evidence-backed findings" },
-  { num: 5, title: "Review", desc: "Instructor sees performance data across all students" },
+  { num: 1, title: "Create", desc: "Instructor defines learning outcomes and assessment parameters", pct: 80, note: "Core functionality works. Needs UX polish." },
+  { num: 2, title: "Share", desc: "Students receive a magic link to access the assessment", pct: 80, note: "Magic link flow is functional. Tied to assessment creation." },
+  { num: 3, title: "Assess", desc: "Student has a 10-20 min adaptive voice conversation with AI", pct: 75, note: "UI and core flow work. Needs bug fixes and smoother conversation flow." },
+  { num: 4, title: "Profile", desc: "AI generates a competency profile with evidence-backed findings", pct: 90, note: "UX and functionality are solid. Minor tone and presentation tweaks." },
+  { num: 5, title: "Review", desc: "Instructor sees performance data across all students", pct: 25, note: "Placeholder. Needs real dashboarding. Not a ton of work to reach MVP." },
 ];
 
 export default function DemoPage() {
@@ -122,7 +122,7 @@ export default function DemoPage() {
                     border: "1px solid #E4E2DE",
                     borderRadius: 6,
                     padding: "16px 18px",
-                    width: 132,
+                    width: 148,
                     display: "flex",
                     flexDirection: "column" as const,
                   }}
@@ -130,8 +130,28 @@ export default function DemoPage() {
                   <div style={{ fontSize: 11, fontWeight: 600, color: "#2B4066", marginBottom: 6 }}>
                     {step.num}. {step.title}
                   </div>
-                  <div style={{ fontSize: 12, color: "#6A6862", lineHeight: 1.45 }}>
+                  <div style={{ fontSize: 12, color: "#6A6862", lineHeight: 1.45, marginBottom: 10 }}>
                     {step.desc}
+                  </div>
+                  <div style={{ marginTop: "auto" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: step.pct >= 75 ? "#2E8A48" : step.pct >= 50 ? "#B8A020" : "#9A9894" }}>
+                        {step.pct}% MVP
+                      </span>
+                    </div>
+                    <div style={{ height: 4, background: "#ECEAE8", borderRadius: 2 }}>
+                      <div
+                        style={{
+                          height: 4,
+                          borderRadius: 2,
+                          width: `${step.pct}%`,
+                          background: step.pct >= 75 ? "#38A858" : step.pct >= 50 ? "#D4B830" : "#BBBAB6",
+                        }}
+                      />
+                    </div>
+                    <div style={{ fontSize: 10, color: "#9A9894", lineHeight: 1.4, marginTop: 6 }}>
+                      {step.note}
+                    </div>
                   </div>
                 </div>
                 {i < PIPELINE_STEPS.length - 1 && (
