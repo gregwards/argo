@@ -106,23 +106,27 @@ async def dev_seed(
     if existing:
         return {"ok": True, "message": "Instructor already exists", "user_id": str(existing.id)}
 
-    # Create instructor user
-    instructor_id = uuid4()
+    # Create instructor user first — flush so FK constraint is satisfied
     instructor = User(
-        id=instructor_id,
+        id=uuid4(),
         email="instructor@argo.education",
         name="Demo Instructor",
         role="instructor",
     )
     db.add(instructor)
+    await db.flush()
 
-    # Create course with the hardcoded ID used by the assessment creation flow
-    course = Course(
-        id=PyUUID("a0000000-0000-0000-0000-000000000001"),
-        instructor_id=instructor_id,
-        name="Demo Course",
-    )
-    db.add(course)
+    # Now create course with the hardcoded ID used by the assessment creation flow
+    course_id = PyUUID("a0000000-0000-0000-0000-000000000001")
+    existing_course = await db.execute(select(Course).where(Course.id == course_id))
+    if not existing_course.scalar_one_or_none():
+        course = Course(
+            id=course_id,
+            instructor_id=instructor.id,
+            name="Demo Course",
+        )
+        db.add(course)
+
     await db.commit()
 
     return {
