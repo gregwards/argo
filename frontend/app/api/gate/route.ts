@@ -8,12 +8,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Wrong password" }, { status: 401 });
   }
 
+  const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+
   const response = NextResponse.json({ ok: true });
   response.cookies.set("site_auth", "granted", {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: cookieDomain ? "none" : "lax", // cross-subdomain requires SameSite=None
+    secure: !!cookieDomain, // Secure required when SameSite=None
     maxAge: 60 * 60 * 24 * 30, // 30 days
     path: "/",
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
   return response;
 }
