@@ -126,10 +126,28 @@ export default function DevIndexPage() {
           </div>
         </Section>
 
+        {/* Seed DB (for fresh environments) */}
+        {users.length === 0 && !loading && (
+          <Section title="Setup">
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <p style={{ fontSize: 14, color: "#6A6862" }}>Fresh database — no users yet.</p>
+              <button
+                onClick={async () => {
+                  const res = await devFetch("/api/dev/seed", { method: "POST" });
+                  if (res?.ok) loadData();
+                }}
+                style={{ ...btnStyle, background: "#2B4066", padding: "8px 16px", fontSize: 13 }}
+              >
+                Seed instructor + course
+              </button>
+            </div>
+          </Section>
+        )}
+
         {/* Impersonate */}
         <Section title="Impersonate User">
           {users.length === 0 && !loading ? (
-            <p style={THEME.system.caption}>No users found.</p>
+            <p style={THEME.system.caption}>No users found. Seed the database first.</p>
           ) : (
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {users.map((u) => (

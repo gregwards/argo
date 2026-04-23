@@ -1,6 +1,7 @@
 """Dev-only API endpoints — protected by site password cookie."""
 
 from datetime import datetime, timedelta
+from uuid import uuid4, UUID as PyUUID
 
 import jwt
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
@@ -91,6 +92,45 @@ async def dev_all_data(db: AsyncSession = Depends(get_db), _=Depends(require_sit
     ]
 
     return {"assessments": assessments, "sessions": sessions, "users": users}
+
+
+@router.post("/dev/seed")
+async def dev_seed(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_site_auth),
+):
+    """Create a default instructor user and course for fresh environments."""
+    # Check if instructor already exists
+    result = await db.execute(select(User).where(User.role == "instructor"))
+    existing = result.scalar_one_or_none()
+    if existing:
+        return {"ok": True, "message": "Instructor already exists", "user_id": str(existing.id)}
+
+    # Create instructor user
+    instructor_id = uuid4()
+    instructor = User(
+        id=instructor_id,
+        email="instructor@argo.education",
+        name="Demo Instructor",
+        role="instructor",
+    )
+    db.add(instructor)
+
+    # Create course with the hardcoded ID used by the assessment creation flow
+    course = Course(
+        id=PyUUID("a0000000-0000-0000-0000-000000000001"),
+        instructor_id=instructor_id,
+        name="Demo Course",
+    )
+    db.add(course)
+    await db.commit()
+
+    return {
+        "ok": True,
+        "message": "Seeded instructor + course",
+        "user_id": str(instructor_id),
+        "course_id": "a0000000-0000-0000-0000-000000000001",
+    }
 
 
 @router.post("/dev/impersonate")
