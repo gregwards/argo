@@ -127,6 +127,14 @@ class RulesEngine:
         Called when the LLM's evaluate_response() function call is received.
         Updates belief model, competency state, and determines next navigation.
         """
+        # Apply any pending navigation from the previous evaluation so the
+        # current_node_id is up to date before we process this evaluation.
+        # Previously this only happened in on_learner_turn(), which could be
+        # skipped if text extraction failed.
+        if self._pending_navigation:
+            self._navigate(self._pending_navigation)
+            self._pending_navigation = None
+
         # Hard time limit enforcement (D-12) — check before any processing
         if self._check_hard_time_limit():
             self._pending_navigation = {"type": "end_session", "reason": "time_limit"}

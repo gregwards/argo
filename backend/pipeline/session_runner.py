@@ -325,20 +325,22 @@ async def _run_bot_inner(room_url: str, bot_token: str, session_id: str, session
             ai_text_buffer.clear()
             rules_engine.on_ai_turn(full_ai_text)
         # Extract learner text from the LLM context (last user message before this function call)
+        learner_text = ""
         try:
             messages = params.context.messages if hasattr(params.context, 'messages') else []
-            # Walk backwards to find the last user message
             for msg in reversed(messages):
                 role = msg.get("role", "")
                 if role == "user":
                     parts = msg.get("parts", [])
                     for part in parts:
                         if isinstance(part, dict) and "text" in part:
-                            rules_engine.on_learner_turn(part["text"])
+                            learner_text = part["text"]
                             break
                     break
         except Exception:
-            pass  # Transcript tracking is best-effort
+            pass
+        # Always call on_learner_turn to increment turn counter, even if text extraction failed
+        rules_engine.on_learner_turn(learner_text)
         try:
             rules_engine.on_evaluation(params.arguments)
         except Exception as e:
