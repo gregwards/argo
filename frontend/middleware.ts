@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const siteAuth = request.cookies.get('site_auth');
 
   // Dev and instructor routes require site password
-  if (path.startsWith('/dev') || path.startsWith('/instructor')) {
+  if (path.startsWith('/dev') || path.startsWith('/instructor') || path.startsWith('/demo')) {
     if (!siteAuth || siteAuth.value !== 'granted') {
       return NextResponse.redirect(new URL('/', request.url));
     }
@@ -21,5 +21,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dev/:path*', '/student/:path*', '/instructor/:path*'],
+  matcher: ['/dev/:path*', '/demo/:path*', '/student/:path*', '/instructor/:path*'],
 };

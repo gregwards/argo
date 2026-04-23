@@ -24,7 +24,8 @@ export default function GatePage() {
         setLoading(false);
         return;
       }
-      router.push("/dev");
+      const data = await res.json();
+      router.push(data.redirect || "/dev");
     } catch {
       setError("Something went wrong");
       setLoading(false);

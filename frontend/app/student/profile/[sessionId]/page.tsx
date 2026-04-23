@@ -185,6 +185,11 @@ export default function StudentProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
+  useEffect(() => {
+    setIsDemoMode(document.cookie.includes("demo_mode=1"));
+  }, []);
 
   useEffect(() => {
     api
@@ -426,6 +431,23 @@ export default function StudentProfilePage() {
           >
             View full assessment transcript &rarr;
           </a>
+          {isDemoMode && (
+            <div style={{ marginTop: 16 }}>
+              <a
+                href="/demo"
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: "#38A858",
+                  textDecoration: "none",
+                  borderBottom: "1px solid #A8D8B8",
+                  paddingBottom: 2,
+                }}
+              >
+                &larr; Back to demo
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>
