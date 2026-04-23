@@ -138,14 +138,46 @@ async def dev_seed(
         )
         db.add(course)
 
+    # Create demo student
+    student = User(
+        id=uuid4(),
+        email="student@argo.education",
+        name="Demo Student",
+        role="student",
+    )
+    db.add(student)
+
     await db.commit()
 
     return {
         "ok": True,
-        "message": "Seeded instructor + course",
-        "user_id": str(instructor_id),
+        "message": "Seeded instructor + course + student",
+        "user_id": str(instructor.id),
+        "student_id": str(student.id),
         "course_id": "a0000000-0000-0000-0000-000000000001",
     }
+
+
+@router.post("/dev/create-student")
+async def dev_create_student(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_site_auth),
+):
+    """Create a demo student user. Idempotent."""
+    result = await db.execute(select(User).where(User.email == "student@argo.education"))
+    existing = result.scalar_one_or_none()
+    if existing:
+        return {"ok": True, "message": "Student already exists", "user_id": str(existing.id)}
+
+    student = User(
+        id=uuid4(),
+        email="student@argo.education",
+        name="Demo Student",
+        role="student",
+    )
+    db.add(student)
+    await db.commit()
+    return {"ok": True, "message": "Created demo student", "user_id": str(student.id)}
 
 
 @router.post("/dev/impersonate")

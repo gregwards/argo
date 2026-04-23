@@ -179,8 +179,21 @@ export default function DevIndexPage() {
 
         {/* Enrollment */}
         <Section title="Enroll Student in Assessment">
-          {users.length === 0 || assessments.length === 0 ? (
-            <p style={THEME.system.caption}>Need at least one student and one assessment.</p>
+          {users.filter((u) => u.role !== "instructor").length === 0 ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <p style={{ fontSize: 14, color: "#6A6862" }}>No student users found.</p>
+              <button
+                onClick={async () => {
+                  const res = await devFetch("/api/dev/create-student", { method: "POST" });
+                  if (res?.ok) loadData();
+                }}
+                style={{ ...btnStyle, background: "#38A858", padding: "8px 16px", fontSize: 13 }}
+              >
+                Create Demo Student
+              </button>
+            </div>
+          ) : assessments.length === 0 ? (
+            <p style={THEME.system.caption}>No assessments yet. Create one first.</p>
           ) : (
             <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
               <div>
