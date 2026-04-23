@@ -4,6 +4,11 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 COPY . .
+
+# NEXT_PUBLIC_* vars must be available at build time — Next.js inlines them into the JS bundle
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 RUN npm run build
 
 # Production stage
@@ -15,7 +20,6 @@ ENV HOSTNAME=0.0.0.0
 # Copy standalone output + static assets
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-# Ensure public dir exists before build (Next.js standalone expects it)
 COPY --from=builder /app/public ./public
 
 EXPOSE 3000
