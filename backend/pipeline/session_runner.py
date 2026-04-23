@@ -24,6 +24,8 @@ from pipecat.transports.daily.transport import DailyTransport, DailyParams
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.audio.filters.rnnoise_filter import RNNoiseFilter
+from pipecat.turns.user_turn_strategies import UserTurnStrategies
+from pipecat.turns.user_stop.speech_timeout_user_turn_stop_strategy import SpeechTimeoutUserTurnStopStrategy
 
 from db.database import async_session, Session as SessionModel, Assessment, CompetencyProfile
 from pipeline.audio_recorder import AudioRecorderProcessor
@@ -310,9 +312,6 @@ async def _run_bot_inner(room_url: str, bot_token: str, session_id: str, session
         )
         logger.info(f"TTS enabled for session {session_id} (inworld jessica)")
 
-    # Turn detection: rely on Deepgram's 5s endpointing as the sole silence
-    # threshold. No LLM-based turn completion — it was shortcutting "complete"
-    # sentences to ~1s, which felt like getting cut off.
 
     # Track AI text for transcript — accumulates chunks until evaluation fires
     ai_text_buffer = []
@@ -444,11 +443,19 @@ async def _run_bot_inner(room_url: str, bot_token: str, session_id: str, session
         messages=[{"role": "system", "content": system_prompt}],
         tools=tools,
     )
-    try:
-        context_aggregator = llm.create_context_aggregator(context)
-    except AttributeError:
-        from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
-        context_aggregator = LLMContextAggregatorPair(context=context)
+    # Use SpeechTimeoutUserTurnStopStrategy for a consistent 5s silence window.
+    # The default TurnAnalyzerUserTurnStopStrategy uses a smart turn model that
+    # predicts sentence completeness and can fire in ~1s for complete sentences,
+    # which feels like getting cut off during an oral assessment.
+    from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair, LLMUserAggregatorParams
+    context_aggregator = LLMContextAggregatorPair(
+        context=context,
+        user_params=LLMUserAggregatorParams(
+            user_turn_strategies=UserTurnStrategies(
+                stop=[SpeechTimeoutUserTurnStopStrategy(user_speech_timeout=5.0)],
+            ),
+        ),
+    )
 
     # Pipeline — audio_recorder must precede stt so it sees frames before STT consumes them
     # Criterion advancement sent via transport data channel (send_app_message)

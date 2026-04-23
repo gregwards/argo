@@ -138,7 +138,7 @@ export default function AssessmentSession() {
   // Visualized as the right-side green accent bar on the response bubble
   // shrinking from bottom to top. silenceProgress: 1 = full bar, 0 = empty.
   const SILENCE_DEBOUNCE_MS = 500;  // wait before starting drain (avoids flutter between words)
-  const SILENCE_DRAIN_MS = 4500;    // visual drain — synced to 5s Deepgram endpointing minus debounce
+  const SILENCE_DRAIN_MS = 5000;    // visual drain — synced to 5s SpeechTimeoutUserTurnStopStrategy
   const SILENCE_TICK_MS = 40;       // update interval
 
   function startSilenceCountdown() {
