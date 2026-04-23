@@ -73,6 +73,7 @@ export default function AssessmentSession() {
   const lastInterimTimeRef = useRef<number>(0);
   const silenceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const silenceDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceDrainedRef = useRef<boolean>(false);  // true once bar reaches 0, prevents restart from late interims
 
   // Auto-scroll history panel
   useEffect(() => {
@@ -142,6 +143,9 @@ export default function AssessmentSession() {
   const SILENCE_TICK_MS = 40;       // update interval
 
   function startSilenceCountdown() {
+    // Don't restart if the bar already drained — prevents late interims from popping it back up
+    if (silenceDrainedRef.current) return;
+
     if (silenceDebounceRef.current) clearTimeout(silenceDebounceRef.current);
     if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
 
@@ -154,6 +158,7 @@ export default function AssessmentSession() {
         setSilenceProgress(remaining);
         if (remaining <= 0) {
           if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
+          silenceDrainedRef.current = true;
         }
       }, SILENCE_TICK_MS);
     }, SILENCE_DEBOUNCE_MS);
@@ -163,6 +168,7 @@ export default function AssessmentSession() {
     if (silenceDebounceRef.current) clearTimeout(silenceDebounceRef.current);
     if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
     setSilenceProgress(0);
+    silenceDrainedRef.current = false;
   }
 
   // Connect to Pipecat via Daily

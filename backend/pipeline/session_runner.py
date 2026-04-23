@@ -389,6 +389,7 @@ async def _run_bot_inner(room_url: str, bot_token: str, session_id: str, session
             floor_map = {"strong": 0.8, "partial": 0.4, "weak": 0.0, "unknown": 0.0}
             floor = floor_map.get(understanding, 0.0)
 
+            logger.debug(f"Sending section_progress: section={section_index}, weight={weight}, floor={floor}")
             transport._client._client.send_app_message(
                 {
                     "label": "rtvi-ai",
@@ -402,8 +403,11 @@ async def _run_bot_inner(room_url: str, bot_token: str, session_id: str, session
                 },
                 None,
             )
+            logger.debug(f"section_progress sent successfully")
         except Exception as e:
             logger.warning(f"Could not send progress event: {e}")
+            import traceback
+            logger.warning(traceback.format_exc())
 
         # Check if session should end (all criteria done or time limit)
         if rules_engine.should_end_session():
