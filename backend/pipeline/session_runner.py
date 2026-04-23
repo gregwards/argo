@@ -268,7 +268,7 @@ async def _run_bot_inner(room_url: str, bot_token: str, session_id: str, session
             audio_in_enabled=True,
             audio_out_enabled=tts_enabled,
             audio_in_filter=RNNoiseFilter() if tts_enabled else None,
-            vad_analyzer=SileroVADAnalyzer(params=VADParams(min_volume=0.5, stop_secs=5.0)),
+            vad_analyzer=SileroVADAnalyzer(params=VADParams(min_volume=0.5, stop_secs=0.5)),
         ),
     )
 
