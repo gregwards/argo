@@ -138,7 +138,7 @@ export default function AssessmentSession() {
   // Visualized as the right-side green accent bar on the response bubble
   // shrinking from bottom to top. silenceProgress: 1 = full bar, 0 = empty.
   const SILENCE_DEBOUNCE_MS = 500;  // wait before starting drain (avoids flutter between words)
-  const SILENCE_DRAIN_MS = 3800;    // visual drain — matches 6s endpointing + pause tolerance
+  const SILENCE_DRAIN_MS = 5500;    // visual drain — synced to 6s Deepgram endpointing minus debounce
   const SILENCE_TICK_MS = 40;       // update interval
 
   function startSilenceCountdown() {
@@ -215,6 +215,7 @@ export default function AssessmentSession() {
         lastInterimTimeRef.current = Date.now();
       },
       onUserTranscriptFinal: (text: string) => {
+        resetSilenceCountdown();
         setInterimText("");
         setListeningState("processing");
         setTranscript((prev) => [
