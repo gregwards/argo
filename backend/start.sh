@@ -1,36 +1,37 @@
 #!/bin/bash
 set -e
 
-echo "Initializing database..."
+echo "Initializing database tables..."
+python -c "import asyncio; from db.database import init_db; asyncio.run(init_db()); print('Tables ready')"
+
+echo "Checking migration state..."
+# If alembic_version table doesn't exist, this is a fresh DB — stamp to head
+# (init_db already created all tables matching current schema)
 python -c "
-import asyncio
-from db.database import init_db, engine
+import asyncio, os
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 
-async def setup():
-    # Create all tables from current models
-    await init_db()
-
-    # Check if alembic_version table exists (fresh DB vs existing)
+async def check():
+    raw = os.getenv('DATABASE_URL', '')
+    url = raw.replace('postgresql://', 'postgresql+asyncpg://', 1) if raw.startswith('postgresql://') else raw
+    engine = create_async_engine(url)
     async with engine.connect() as conn:
-        result = await conn.execute(text(
-            \"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'alembic_version')\"
-        ))
-        has_alembic = result.scalar()
+        result = await conn.execute(text(\"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'alembic_version')\"))
+        exists = result.scalar()
+    await engine.dispose()
+    print('HAS_ALEMBIC=' + ('1' if exists else '0'))
+    return exists
 
-    if not has_alembic:
-        # Fresh DB: tables created by init_db() match latest schema.
-        # Stamp alembic to head so it doesn't try to replay migrations.
-        import subprocess
-        subprocess.run(['alembic', 'stamp', 'head'], check=True)
-        print('Fresh DB: stamped alembic to head')
-    else:
-        # Existing DB: run any pending migrations
-        subprocess.run(['alembic', 'upgrade', 'head'], check=True)
-        print('Existing DB: migrations applied')
-
-asyncio.run(setup())
-"
+has = asyncio.run(check())
+exit(0 if has else 1)
+" && {
+    echo "Existing DB — running migrations..."
+    alembic upgrade head
+} || {
+    echo "Fresh DB — stamping alembic to head..."
+    alembic stamp head
+}
 
 echo "Starting server on port ${PORT:-8000}..."
 exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
