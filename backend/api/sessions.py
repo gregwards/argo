@@ -52,17 +52,18 @@ async def create_session(
     if not enrollment.scalar_one_or_none():
         raise HTTPException(status_code=403, detail="Not enrolled")
 
-    # Check attempt limits (D-03)
-    attempt_count = await db.execute(
-        select(func.count(SessionModel.id)).where(
-            SessionModel.assessment_id == assessment.id,
-            SessionModel.student_id == user.id,
-            SessionModel.status.in_(["completed", "active"]),
+    # Check attempt limits (D-03) — skip for demo student
+    if user.email != "student@argo.education":
+        attempt_count = await db.execute(
+            select(func.count(SessionModel.id)).where(
+                SessionModel.assessment_id == assessment.id,
+                SessionModel.student_id == user.id,
+                SessionModel.status.in_(["completed", "active"]),
+            )
         )
-    )
-    count = attempt_count.scalar()
-    if count >= (assessment.max_attempts or 1):
-        raise HTTPException(status_code=403, detail="Maximum attempts reached")
+        count = attempt_count.scalar()
+        if count >= (assessment.max_attempts or 1):
+            raise HTTPException(status_code=403, detail="Maximum attempts reached")
 
     # Create session record
     session = SessionModel(
