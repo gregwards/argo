@@ -5,12 +5,13 @@ from uuid import uuid4, UUID as PyUUID
 
 import jwt
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
+from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.database import (
-    get_db, User, Course, Assessment, Session as SessionModel,
-    CompetencyProfile,
+    get_db, User, Course, Assessment, AssessmentEnrollment,
+    Session as SessionModel, CompetencyProfile,
 )
 
 from api.deps import JWT_SECRET, JWT_ALGORITHM
@@ -87,11 +88,21 @@ async def dev_all_data(db: AsyncSession = Depends(get_db), _=Depends(require_sit
     # Users
     result = await db.execute(select(User).order_by(User.created_at.desc()))
     users = [
-        {"id": str(u.id), "email": u.email, "name": u.name}
+        {"id": str(u.id), "email": u.email, "name": u.name, "role": u.role}
         for u in result.scalars().all()
     ]
 
-    return {"assessments": assessments, "sessions": sessions, "users": users}
+    # Enrollments
+    result = await db.execute(
+        select(AssessmentEnrollment)
+        .order_by(AssessmentEnrollment.enrolled_at.desc())
+    )
+    enrollments = [
+        {"assessment_id": str(e.assessment_id), "student_id": str(e.student_id)}
+        for e in result.scalars().all()
+    ]
+
+    return {"assessments": assessments, "sessions": sessions, "users": users, "enrollments": enrollments}
 
 
 @router.post("/dev/seed")
@@ -179,3 +190,35 @@ async def dev_impersonate(
     response.set_cookie("portal_session", portal_token, httponly=True, samesite="lax", max_age=86400 * 7, path="/")
 
     return {"ok": True, "impersonating": user.email, "role": role}
+
+
+class EnrollRequest(BaseModel):
+    student_id: str
+    assessment_id: str
+
+
+@router.post("/dev/enroll")
+async def dev_enroll(
+    body: EnrollRequest,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_site_auth),
+):
+    """Create an AssessmentEnrollment row. Idempotent — no-op if already enrolled."""
+    # Check existing
+    result = await db.execute(
+        select(AssessmentEnrollment).where(
+            AssessmentEnrollment.assessment_id == body.assessment_id,
+            AssessmentEnrollment.student_id == body.student_id,
+        )
+    )
+    if result.scalar_one_or_none():
+        return {"ok": True, "message": "Already enrolled"}
+
+    enrollment = AssessmentEnrollment(
+        id=uuid4(),
+        assessment_id=body.assessment_id,
+        student_id=body.student_id,
+    )
+    db.add(enrollment)
+    await db.commit()
+    return {"ok": True, "message": "Enrolled"}

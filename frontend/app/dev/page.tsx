@@ -31,6 +31,7 @@ interface UserRow {
   id: string;
   email: string;
   name: string;
+  role: string;
 }
 
 async function devFetch(path: string, opts?: RequestInit) {
@@ -47,6 +48,10 @@ export default function DevIndexPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [impersonating, setImpersonating] = useState<string>("");
+  const [enrollments, setEnrollments] = useState<{ assessment_id: string; student_id: string }[]>([]);
+  const [enrollStudentId, setEnrollStudentId] = useState<string>("");
+  const [enrollAssessmentId, setEnrollAssessmentId] = useState<string>("");
+  const [enrollMsg, setEnrollMsg] = useState<string>("");
 
   async function loadData() {
     setLoading(true);
@@ -59,6 +64,7 @@ export default function DevIndexPage() {
     setAssessments(data.assessments || []);
     setSessions(data.sessions || []);
     setUsers(data.users || []);
+    setEnrollments(data.enrollments || []);
     setLoading(false);
   }
 
@@ -167,6 +173,80 @@ export default function DevIndexPage() {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+        </Section>
+
+        {/* Enrollment */}
+        <Section title="Enroll Student in Assessment">
+          {users.length === 0 || assessments.length === 0 ? (
+            <p style={THEME.system.caption}>Need at least one student and one assessment.</p>
+          ) : (
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "#9A9894", display: "block", marginBottom: 4 }}>Student</label>
+                <select
+                  value={enrollStudentId}
+                  onChange={(e) => setEnrollStudentId(e.target.value)}
+                  style={{ fontSize: 13, padding: "6px 10px", borderRadius: 4, border: "1px solid #DFDDD9", fontFamily: "monospace", minWidth: 220 }}
+                >
+                  <option value="">Select student...</option>
+                  {users.filter((u) => u.role !== "instructor").map((u) => (
+                    <option key={u.id} value={u.id}>{u.email}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "#9A9894", display: "block", marginBottom: 4 }}>Assessment</label>
+                <select
+                  value={enrollAssessmentId}
+                  onChange={(e) => setEnrollAssessmentId(e.target.value)}
+                  style={{ fontSize: 13, padding: "6px 10px", borderRadius: 4, border: "1px solid #DFDDD9", fontFamily: "monospace", minWidth: 220 }}
+                >
+                  <option value="">Select assessment...</option>
+                  {assessments.map((a) => (
+                    <option key={a.id} value={a.id}>{a.title}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!enrollStudentId || !enrollAssessmentId) return;
+                  setEnrollMsg("");
+                  const res = await devFetch("/api/dev/enroll", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ student_id: enrollStudentId, assessment_id: enrollAssessmentId }),
+                  });
+                  if (res?.ok) {
+                    setEnrollMsg(res.message);
+                    loadData();
+                  } else {
+                    setEnrollMsg("Failed to enroll");
+                  }
+                }}
+                disabled={!enrollStudentId || !enrollAssessmentId}
+                style={{ ...btnStyle, background: enrollStudentId && enrollAssessmentId ? "#2B4066" : "#BBBAB6", padding: "7px 16px", fontSize: 13 }}
+              >
+                Enroll
+              </button>
+              {enrollMsg && <span style={{ fontSize: 13, color: "#2E8A48", fontWeight: 500 }}>{enrollMsg}</span>}
+            </div>
+          )}
+          {enrollments.length > 0 && (
+            <div style={{ marginTop: 14, fontSize: 12, color: "#6A6862" }}>
+              <strong style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "#9A9894" }}>Current enrollments:</strong>
+              <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {enrollments.map((e, i) => {
+                  const student = users.find((u) => u.id === e.student_id);
+                  const assessment = assessments.find((a) => a.id === e.assessment_id);
+                  return (
+                    <span key={i} style={{ background: "#E8F5EC", padding: "3px 10px", borderRadius: 3, fontFamily: "monospace", fontSize: 11 }}>
+                      {student?.email || e.student_id.slice(0, 8)} → {assessment?.title || e.assessment_id.slice(0, 8)}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           )}
         </Section>
