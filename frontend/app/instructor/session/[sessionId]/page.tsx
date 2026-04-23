@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { AuthErrorBanner } from "@/components/AuthError";
 import { api } from "@/lib/api";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -237,9 +238,11 @@ export default function SessionDrilldown() {
     return (
       <main className="min-h-screen py-10" style={{ background: "#F4F3F1" }}>
         <div className="max-w-4xl mx-auto px-6">
-          <p style={{ fontFamily: "Outfit, sans-serif", fontSize: 14, color: "#B91C1C" }}>
-            {error || "Session not found."}
-          </p>
+          {error ? <AuthErrorBanner error={error} /> : (
+            <p style={{ fontFamily: "Outfit, sans-serif", fontSize: 14, color: "#B91C1C" }}>
+              Session not found.
+            </p>
+          )}
         </div>
       </main>
     );

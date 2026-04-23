@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { AuthErrorBanner } from "@/components/AuthError";
 import { api } from "@/lib/api";
 import BoxPlot, { BoxPlotData } from "@/components/BoxPlot";
 
@@ -127,11 +128,7 @@ export default function AssessmentDashboard() {
             Loading…
           </p>
         )}
-        {error && (
-          <p style={{ fontSize: 14, color: "#B91C1C", fontFamily: "Outfit, sans-serif" }}>
-            {error}
-          </p>
-        )}
+        {error && <AuthErrorBanner error={error} />}
 
         {!loading && !error && (
           <>

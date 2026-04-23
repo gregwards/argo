@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { AuthErrorBanner } from "@/components/AuthError";
 
 interface AttainmentLevel {
   level: "strong" | "partial" | "weak";
@@ -158,8 +159,8 @@ export default function EditAssessmentPage() {
 
   if (error) {
     return (
-      <main style={{ minHeight: "100vh", background: colors.bg, fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "#7E4452" }}>{error}</p>
+      <main style={{ minHeight: "100vh", background: colors.bg, fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <AuthErrorBanner error={error} />
       </main>
     );
   }

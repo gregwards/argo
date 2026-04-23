@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AuthErrorBanner } from "@/components/AuthError";
 import { api } from "@/lib/api";
 
 interface Assessment {
@@ -86,11 +87,7 @@ export default function InstructorHome() {
             Loading assessments…
           </p>
         )}
-        {error && (
-          <p style={{ fontSize: 14, color: "#B91C1C", fontFamily: "Outfit, sans-serif" }}>
-            {error}
-          </p>
-        )}
+        {error && <AuthErrorBanner error={error} />}
 
         {/* Empty state */}
         {!loading && !error && assessments.length === 0 && (

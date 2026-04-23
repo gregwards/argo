@@ -12,21 +12,10 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Instructor routes additionally need session cookie (assessment-scoped JWT)
-  if (path.startsWith('/instructor')) {
-    const session = request.cookies.get('session');
-    if (!session) {
-      return NextResponse.redirect(new URL('/auth', request.url));
-    }
-  }
-
-  // Student portal routes need portal_session cookie
-  if (path.startsWith('/student')) {
-    const portalSession = request.cookies.get('portal_session');
-    if (!portalSession) {
-      return NextResponse.redirect(new URL('/auth', request.url));
-    }
-  }
+  // Note: instructor and student routes also require session JWTs for backend API calls.
+  // Those are validated by the backend (get_current_user / get_portal_user), not here.
+  // Frontend pages handle 401 responses from the backend gracefully.
+  // The site password gate above is sufficient for middleware-level access control.
 
   return NextResponse.next();
 }
