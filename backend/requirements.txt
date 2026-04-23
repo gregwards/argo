@@ -5,7 +5,7 @@ python-dotenv>=1.0.0
 python-multipart>=0.0.9
 
 # Pipecat — voice pipeline
-pipecat-ai[google,deepgram,silero,daily]>=1.0.0
+pipecat-ai[google,deepgram,silero,daily,inworld]>=1.0.0
 daily-python>=0.27.0
 aiohttp>=3.9.0
 

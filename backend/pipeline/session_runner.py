@@ -291,10 +291,10 @@ async def _run_bot_inner(room_url: str, bot_token: str, session_id: str, session
     # Audio recorder — passively captures student audio before STT consumes frames
     audio_recorder = AudioRecorderProcessor(sample_rate=16000, channels=1)
 
-    # STT — 6000ms endpointing gives students time to pause mid-thought
+    # STT — fixed 5000ms silence threshold before finalizing transcript
     stt = DeepgramSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
-        live_options=LiveOptions(language="en", model="nova-2", interim_results=True, endpointing=6000),
+        live_options=LiveOptions(language="en", model="nova-2", interim_results=True, endpointing=5000),
     )
 
     # LLM
@@ -310,21 +310,9 @@ async def _run_bot_inner(room_url: str, bot_token: str, session_id: str, session
         )
         logger.info(f"TTS enabled for session {session_id} (inworld jessica)")
 
-    # Smart turn detection: be patient with stalling/hedging language
-    from pipecat.processors.aggregators.llm_response_universal import UserTurnCompletionConfig
-    llm.set_user_turn_completion_config(UserTurnCompletionConfig(
-        incomplete_short_timeout=6.0,
-        incomplete_long_timeout=10.0,
-        instructions=(
-            "This is an oral assessment. The student is being evaluated and may need "
-            "time to formulate their thoughts. Treat the following as INCOMPLETE turns "
-            "that need more time: stalling phrases ('let me think about that', 'that's "
-            "a good question', 'hmm', 'so basically', 'well'), short acknowledgments "
-            "('yeah', 'ok', 'right'), and any response that sounds like the student is "
-            "about to elaborate. Only mark a turn as complete when the student has clearly "
-            "finished making a substantive point and has fallen silent."
-        ),
-    ))
+    # Turn detection: rely on Deepgram's 5s endpointing as the sole silence
+    # threshold. No LLM-based turn completion — it was shortcutting "complete"
+    # sentences to ~1s, which felt like getting cut off.
 
     # Track AI text for transcript — accumulates chunks until evaluation fires
     ai_text_buffer = []
