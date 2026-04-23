@@ -372,6 +372,11 @@ class RulesEngine:
 
         if navigation["type"] == "advance":
             target_id = navigation.get("target_node_id")
+            if not target_id or target_id not in self.ctx.nodes:
+                # No more nodes — end the session
+                logger.info(f"No next node to advance to — ending session")
+                self.state.phase = 99
+                return
             if target_id and target_id in self.ctx.nodes:
                 target_node = self.ctx.nodes[target_id]
                 if target_node.get("phase", self.state.phase) != self.state.phase:
