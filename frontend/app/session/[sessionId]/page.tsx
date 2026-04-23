@@ -168,7 +168,10 @@ export default function AssessmentSession() {
     if (silenceDebounceRef.current) clearTimeout(silenceDebounceRef.current);
     if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
     setSilenceProgress(0);
-    silenceDrainedRef.current = false;
+    // Don't clear silenceDrainedRef here — it's cleared when the user
+    // actually starts speaking again (onUserTranscriptInterim), not when
+    // the AI responds. This prevents late interims from popping the bar
+    // back up between the AI responding and the user's next turn.
   }
 
   // Connect to Pipecat via Daily
@@ -216,6 +219,7 @@ export default function AssessmentSession() {
       onUserTranscriptInterim: (text: string) => {
         setInterimText(text);
         setListeningState("listening");
+        silenceDrainedRef.current = false;  // User is speaking again — allow countdown
         resetSilenceCountdown();
         startSilenceCountdown();
         lastInterimTimeRef.current = Date.now();
