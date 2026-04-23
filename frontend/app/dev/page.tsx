@@ -34,6 +34,7 @@ interface UserRow {
 }
 
 async function devFetch(path: string, opts?: RequestInit) {
+  console.log("[devFetch]", path, "credentials: include", "opts:", opts);
   const res = await fetch(`${API}${path}`, { ...opts, credentials: "include" });
   if (!res.ok) return null;
   return res.json();
