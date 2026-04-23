@@ -186,6 +186,8 @@ export default function AssessmentSession() {
         setPhase("active");
         setListeningState("listening");
         resetSilenceCountdown();
+        setSilenceProgress(1);  // Restore bar to full — ready for next turn
+        silenceDrainedRef.current = false;
         setTranscript((prev) => [
           ...prev,
           { role: "ai", text, final: true, timestamp: new Date().toISOString() },
@@ -219,8 +221,12 @@ export default function AssessmentSession() {
       onUserTranscriptInterim: (text: string) => {
         setInterimText(text);
         setListeningState("listening");
-        silenceDrainedRef.current = false;  // User is speaking again — allow countdown
-        resetSilenceCountdown();
+        silenceDrainedRef.current = false;
+        // Keep bar at full while speaking — just restart the drain timer
+        // without resetting progress (avoids flash between interims)
+        if (silenceDebounceRef.current) clearTimeout(silenceDebounceRef.current);
+        if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
+        setSilenceProgress(1);
         startSilenceCountdown();
         lastInterimTimeRef.current = Date.now();
       },
@@ -729,7 +735,7 @@ export default function AssessmentSession() {
                       top: 0,
                       right: -4,
                       width: 4,
-                      height: silenceProgress > 0 ? `${silenceProgress * 100}%` : "100%",
+                      height: `${silenceProgress * 100}%`,
                       background: "#38D670",
                       borderRadius: "0 2px 2px 0",
                       transition: silenceProgress === 1 ? "none" : "height 40ms linear",
